@@ -1,0 +1,8 @@
+python-dotenv
+langchain
+langchain-classic
+langchain-openai
+psycopg[binary]
+pandas
+sqlalchemy
+streamlit

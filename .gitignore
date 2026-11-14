@@ -1,0 +1,35 @@
+# Dependency folders
+node_modules/
+venv/
+.venv/
+env/
+.env/
+vendor/
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.pyre/
+
+# Build / output / workspace folders
+dist/
+build/
+out/
+coverage/
+workspace/
+
+# IDE / editor folders
+.vscode/
+.idea/
+.settings/
+.project/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

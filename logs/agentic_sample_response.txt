@@ -1,0 +1,66 @@
+{
+ "messages": 
+  [
+    "HumanMessage":{"content":"top 5 products by sale", "additional_kwargs":{}, "response_metadata":{}, "id":"1e70b2cf-9752-47f2-8851-f58099005209"}, 
+	"AIMessage":{
+	   "content": [
+		   {
+		     "id": "rs_00039d26b3ffe63a006aeecbf3f75487d1afde796c8449f938", "summary": [], "type": "reasoning", "content": [], "encrypted_content": "gAAAAABq7sv0jpltq1A50nifQqov_="
+		  },   
+		  {
+		    "arguments": "{}", "call_id": "call_CcjPGtZBoji6H1hj0qxDZjMy", "name": "get_schema", "type": "function_call", "id": "fc_00039d26b3ffe63a006aeecbf4250487d1baef1f220adf9e1b", "status": "completed"
+		   }
+	   ], 
+	  "additional_kwargs":{}, 
+	  "response_metadata":{"id": "resp_00039d26b3ffe63a006aeecbf32d1487d1bd97eb553d310955", "created_at": 1794034675.0, "metadata": {}, "model": "gpt-6-luna", "object": "response", "service_tier": "default", "status": "completed", "model_provider": "openai", "model_name": "gpt-6-luna"}, 
+	  
+	  "id":"resp_00039d26b3ffe63a006aeecbf32d1487d1bd97eb553d310955", 
+	  
+	  "tool_calls":[{"name": "get_schema", "args": {}, "id": "call_CcjPGtZBoji6H1hj0qxDZjMy", "type": "tool_call"}], "invalid_tool_calls":[], "usage_metadata":{"input_tokens": 108, "output_tokens": 25, "total_tokens": 133, "input_token_details": {"cache_creation": 0, "cache_read": 0}, "output_token_details": {"reasoning": 9}})},
+	  
+	  ToolMessage(content="{"returns": {"order_id": "character varying", "return_reason": "character varying"}, "orders": {"row_id": "double precision", "order_date": "date", "ship_date": "date", "postal_code": "double precision", "sales": "double precision", "quantity": "double precision", "discount": "double precision", "profit": "double precision", "country": "character varying", "city": "character varying", "state": "character varying", "product_name": "character varying", "region": "character varying", "product_id": "character varying", "order_id": "character varying", "category": "character varying", "sub_category": "character varying", "ship_mode": "character varying", "customer_id": "character varying", "customer_name": "character varying", "segment": "character varying"}}", name="get_schema", id="33a44c77-caaa-4b63-b5a5-0ccb6ef1da46", tool_call_id="call_CcjPGtZBoji6H1hj0qxDZjMy"), 
+	  
+	  AIMessage(content=[
+	     {"id": "rs_00039d26b3ffe63a006aeecbf5b95487d1be5a81320e40724c", "summary": [], "type": "reasoning", "content": [], "encrypted_content": "gAAAAABq74S-zhOt8PnJlRqiie1v_tvTBjdUVOQlIg-yHlkU"}, 
+		 
+		 { 
+		   "arguments": "{"query":"SELECT product_name, SUM(sales) AS total_sales\\nFROM orders\\nGROUP BY product_name\\nORDER BY total_sales DESC\\nLIMIT 5;"}", 
+		   "call_id": "call_yCGcbqkXiJmauRzKWGVuVOSg", 
+		   "name": "execute_query", 
+		   "type": "function_call", 
+		   "id": "fc_00039d26b3ffe63a006aeecbf6060887d1b44d4082b08afecf", "status": "completed"
+		 }], 
+		 
+		 "additional_kwargs":{}, 
+		 "response_metadata":{
+		    "id": "resp_00039d26b3ffe63a006aeecbf4d5a887d1813559fd33dca45e", 
+			"created_at": 1794034676.0, "metadata": {}, "model": "gpt-6-luna", "object": "response", "service_tier": "default", "status": "completed", "model_provider": "openai", "model_name": "gpt-6-luna"
+		}, 
+		
+		id="resp_00039d26b3ffe63a006aeecbf4d5a887d1813559fd33dca45e", 
+		"tool_calls":[
+		   {
+		     "name": "execute_query", 
+			 "args": {"query": "SELECT product_name, SUM(sales) AS total_sales\nFROM orders\nGROUP BY product_name\nORDER BY total_sales DESC\nLIMIT 5;"}, 
+			 "id": "call_yCGcbqkXiJmauRzKWGVuVOSg", "type": "tool_call"
+			}
+		], 
+		
+		"invalid_tool_calls":[], 
+		"usage_metadata":{"input_tokens": 322, "output_tokens": 74, "total_tokens": 396, "input_token_details": {"cache_creation": 0, "cache_read": 0}, "output_token_details": {"reasoning": 25}}), 
+		
+		ToolMessage(
+		   content="                                                               product_name  total_sales\n                                      Canon imageCLASS 2200 Advanced Copier    61599.880\nFellowes PB500 Electric Punch Plastic Comb Binding Machine with Manual Bind    27453.384\n                      Cisco TelePresence System EX90 Videoconferencing Unit    22638.500\n                               HON 5400 Series Task Chairs for Big and Tall    21870.572\n                                 GBC DocuBind TL300 Electric Binding System    19823.484", name="execute_query", id="5df3a9b3-f355-45fe-8739-48d00259c402", tool_call_id="call_yCGcbqkXiJmauRzKWGVuVOSg"
+		), 
+		 
+		 AIMessage(
+		    content=[
+			  {"type": "text", "text": "Top 5 products by total sales:\n\n| Product | Total sales |\n|---|---:|\n| Canon imageCLASS 2200 Advanced Copier | $61,599.88 |\n|  Fellowes PB500 Electric Punch Plastic Comb Binding Machine with Manual Bind | $27,453.38 |\n| Cisco TelePresence System EX90 Videoconferencing Unit | $22,638.50 |\n| HON 5400 Series Task Chairs for Big and Tall | $21,870.57 |\n| GBC DocuBind TL300 Electric Binding System | $19,823.48 |", 
+		
+		      "annotations": [], 
+		      "id": "msg_00039d26b3ffe63a006aeecbf7606887d1a3263b3272853d36", "phase": "final_answer"
+			}], 
+			
+			"additional_kwargs":{}, 
+			"response_metadata":{"id": "resp_00039d26b3ffe63a006aeecbf6d9a887d18d54d238c7c92154", "created_at": 1794034678.0, "metadata": {}, "model": "gpt-6-luna", "object": "response", "service_tier": "default", "status": "completed", "model_provider": "openai", "model_name": "gpt-6-luna"}, id="resp_00039d26b3ffe63a006aeecbf6d9a887d18d54d238c7c92154", "tool_calls":[], "invalid_tool_calls":[], "usage_metadata":{"input_tokens": 505, "output_tokens": 121, "total_tokens": 626, "input_token_details": {"cache_creation": 0, "cache_read": 0}, "output_token_details": {"reasoning": 0}})]
+}
