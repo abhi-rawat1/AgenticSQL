@@ -5,7 +5,6 @@ venv/
 env/
 .env/
 vendor/
-.env
 
 # Python cache
 __pycache__/
