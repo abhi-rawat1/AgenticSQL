@@ -163,8 +163,10 @@ pip install -r req.txt
 ```
 
 ### 4. Configure environment variables
+Either 
+cp .env.example .env
 
-Create a `.env` file in the project root with values similar to:
+Or Create a `.env` file in the project root with values similar to:
 
 ```env
 OPENAI_API_KEY=your_openai_key_here
@@ -266,6 +268,7 @@ Potential improvements include:
 - Stateful Management for LLM
 - Cost Optimization by reducing Token 
 - Cloud integration
+- DBT Model Setup and integrate with AgenticSQL for Query Generation
 
 ## Contribution
 
