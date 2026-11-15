@@ -1,4 +1,5 @@
 # Dependency folders
+.env
 node_modules/
 venv/
 .venv/
