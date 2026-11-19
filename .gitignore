@@ -35,3 +35,9 @@ Thumbs.db
 
 # Logs
 *.log
+customer_support_assist/.dev.env
+customer_support_assist/logs/*
+customer_support_assist/myenv1/*
+customer_support_assist/myenv1/*/*
+myenv/*/*
+myenv/*

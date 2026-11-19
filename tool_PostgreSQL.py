@@ -49,4 +49,5 @@ def get_schema():
     return schema
 
 # print(get_schema())   # Need to comment tool decorator to run this function directly
-# print(execute_query("SELECT * FROM orders limit 5;"))
+
+# print(execute_query("select count(*) from shipments;"))

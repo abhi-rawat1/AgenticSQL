@@ -6,3 +6,4 @@ psycopg[binary]
 pandas
 sqlalchemy
 streamlit
+PyJWT
