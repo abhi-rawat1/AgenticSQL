@@ -54,6 +54,11 @@ _REQUIRED_FIELDS = {
 
 
 def _required_missing(intent: str, entities: dict[str, Any]) -> list[str]:
+    if intent in {"cancel_item", "cancel_order"}:
+        if entities.get("order_id") or entities.get("customer_id"):
+            return []
+        return ["order_id or customer_id"]
+
     if intent == "metric_query" and not entities.get("metric_name"):
         return ["metric_name"]
 
@@ -211,15 +216,16 @@ def _lifecycle_action_node(state: SupportWorkflowState) -> SupportWorkflowState:
     intent = state["intent"]
     entities = state.get("entities", {})
     order_id = str(entities.get("order_id") or "")
+    customer_id = str(entities.get("customer_id") or "") or None
     reason = str(entities.get("reason") or entities.get("return_reason") or f"Approval requested for {intent}")
 
-    if not order_id:
-        return {**state, "status": "awaiting_follow_up", "answer": "Please provide the order ID.", "missing_fields": ["order_id"]}
+    if not order_id and not customer_id:
+        return {**state, "status": "awaiting_follow_up", "answer": "Please provide the order ID or customer ID.", "missing_fields": ["order_id or customer_id"]}
 
     if intent == "initiate_refund":
         result = process_refund(order_id, reason, "support-agent")
     else:
-        result = process_cancel_or_return(order_id, intent, reason, "support-agent")
+        result = process_cancel_or_return(order_id, intent, reason, "support-agent", customer_id=customer_id)
 
     trace_request_step("lifecycle_action_evaluated", state["request_id"], {"intent": intent, "order_id": order_id, "status": result["status"]})
     return {
@@ -227,6 +233,8 @@ def _lifecycle_action_node(state: SupportWorkflowState) -> SupportWorkflowState:
         "status": result["status"],
         "answer": result["answer"],
         "approval_request": result.get("approval_request"),
+        "missing_fields": result.get("missing_fields", state.get("missing_fields", [])),
+        "follow_up_question": result.get("answer") if result["status"] == "awaiting_follow_up" else state.get("follow_up_question"),
         "rows": [],
         "presentation": None,
         "sql": None,

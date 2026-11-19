@@ -159,6 +159,32 @@ def render_query_result(response: dict):
         st.dataframe(df, use_container_width=True)
 
 
+def render_workflow_response(result: dict):
+    response = result.get("response", {}) if isinstance(result, dict) else {}
+    status = response.get("status")
+    st.subheader("Result")
+
+    if status == "awaiting_follow_up":
+        st.warning(response.get("answer"))
+        missing = response.get("missing_fields", [])
+        if missing:
+            st.caption("Missing information: " + ", ".join(missing))
+    elif status == "awaiting_human_approval":
+        st.warning(response.get("answer"))
+        if response.get("approval_request"):
+            st.json(response["approval_request"])
+    elif status in {"ok", "blocked"} and (response.get("rows") or response.get("presentation") or response.get("sql")):
+        render_query_result(response)
+    elif status == "action_completed":
+        st.success(response.get("answer"))
+    elif status == "no_action_needed":
+        st.info(response.get("answer"))
+    elif status == "not_found":
+        st.error(response.get("answer"))
+    else:
+        st.info(response.get("answer", "No result available."))
+
+
 st.set_page_config(page_title="CustomerSupportAssist", page_icon="🛍️", layout="wide")
 
 if "user" not in st.session_state:
@@ -169,6 +195,8 @@ if "history" not in st.session_state:
     st.session_state.history = []
 if "pending_workflow" not in st.session_state:
     st.session_state.pending_workflow = None
+if "last_workflow_result" not in st.session_state:
+    st.session_state.last_workflow_result = None
 
 if st.session_state.user is None:
     st.title("CustomerSupportAssist")
@@ -258,53 +286,38 @@ with tabs[0]:
 
         response = result.get("response", {})
         st.session_state.pending_workflow = response.get("pending_state")
-        st.subheader("Result")
-        status = response.get("status")
-        if status == "awaiting_follow_up":
-            st.warning(response.get("answer"))
-            missing = response.get("missing_fields", [])
-            if missing:
-                st.caption("Missing information: " + ", ".join(missing))
-        elif status == "awaiting_human_approval":
-            st.warning(response.get("answer"))
-            if response.get("approval_request"):
-                st.json(response["approval_request"])
-        elif status in {"ok", "blocked"} and (response.get("rows") or response.get("presentation") or response.get("sql")):
-            render_query_result(response)
-        elif status == "action_completed":
-            st.success(response.get("answer"))
-        elif status == "no_action_needed":
-            st.info(response.get("answer"))
-        else:
-            st.info(response.get("answer", "No result available."))
-
-        if st.session_state.pending_workflow:
-            pending = st.session_state.pending_workflow
-            with st.form("workflow_follow_up"):
-                st.caption("Complete the requested information to continue this workflow.")
-                follow_up_answer = st.text_input("Your answer")
-                resume_clicked = st.form_submit_button("Continue workflow")
-                if resume_clicked:
-                    if not follow_up_answer.strip():
-                        st.error("Please provide the missing information.")
-                    else:
-                        resumed = resume_support_request(
-                            follow_up_answer.strip(),
-                            pending,
-                            user_id=user.get("username"),
-                            session_id=st.session_state.get("access_token", "streamlit-session"),
-                        )
-                        resumed_response = resumed.get("response", {})
-                        st.session_state.pending_workflow = resumed_response.get("pending_state")
-                        st.session_state.history.append({"prompt": follow_up_answer, "result": resumed})
-                        st.success(resumed_response.get("answer", "Workflow updated."))
-                        st.rerun()
-
-        if result.get("trace"):
-            st.subheader("Trace")
-            st.json(result["trace"])
-
+        st.session_state.last_workflow_result = result
         st.session_state.history.append({"prompt": prompt, "result": result})
+
+    if st.session_state.last_workflow_result:
+        render_workflow_response(st.session_state.last_workflow_result)
+
+        if st.session_state.last_workflow_result.get("trace"):
+            with st.expander("Workflow trace"):
+                st.json(st.session_state.last_workflow_result["trace"])
+
+    if st.session_state.pending_workflow:
+        pending = st.session_state.pending_workflow
+        with st.form("workflow_follow_up", clear_on_submit=True):
+            st.caption("Complete the requested information to continue this workflow.")
+            follow_up_answer = st.text_input("Your answer")
+            resume_clicked = st.form_submit_button("Continue workflow")
+
+        if resume_clicked:
+            if not follow_up_answer.strip():
+                st.error("Please provide the missing information.")
+            else:
+                resumed = resume_support_request(
+                    follow_up_answer.strip(),
+                    pending,
+                    user_id=user.get("username"),
+                    session_id=st.session_state.get("access_token", "streamlit-session"),
+                )
+                resumed_response = resumed.get("response", {})
+                st.session_state.pending_workflow = resumed_response.get("pending_state")
+                st.session_state.last_workflow_result = resumed
+                st.session_state.history.append({"prompt": follow_up_answer, "result": resumed})
+                st.rerun()
 
     if st.session_state.history:
         st.subheader("Recent interactions")

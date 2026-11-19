@@ -13,6 +13,19 @@ DELIVERED_RETURN_WINDOW_DAYS = 30
 REFUND_AUTO_LIMIT = 100.0
 
 
+def get_customer_cancellation_candidates(customer_id: str) -> list[dict[str, Any]]:
+    sql = text("""
+        SELECT o.order_id, o.status, o.total_amount, o.shipping_status
+        FROM orders o
+        WHERE o.customer_id = :customer_id
+          AND LOWER(o.status) IN ('processing', 'shipped')
+        ORDER BY o.order_date DESC, o.order_id DESC
+    """)
+    with engine.connect() as connection:
+        rows = connection.execute(sql, {"customer_id": int(customer_id)}).mappings().all()
+    return [dict(row) for row in rows]
+
+
 def get_order_lifecycle(order_id: str) -> dict[str, Any]:
     sql = text("""
         SELECT o.order_id, o.status, o.total_amount, o.payment_status,
@@ -43,7 +56,24 @@ def _update_order_status(order_id: str, status: str, shipping_status: str | None
         })
 
 
-def process_cancel_or_return(order_id: str, intent: str, reason: str, requested_by: str) -> dict[str, Any]:
+def process_cancel_or_return(order_id: str, intent: str, reason: str, requested_by: str, customer_id: str | None = None) -> dict[str, Any]:
+    if not order_id and customer_id:
+        candidates = get_customer_cancellation_candidates(customer_id)
+        if not candidates:
+            return {
+                "status": "no_action_needed",
+                "answer": f"Customer {customer_id} has no processing or shipped orders that can be cancelled.",
+            }
+        if len(candidates) == 1:
+            order_id = str(candidates[0]["order_id"])
+        else:
+            choices = ", ".join(f"{row['order_id']} ({row['status']})" for row in candidates)
+            return {
+                "status": "awaiting_follow_up",
+                "answer": f"Customer {customer_id} has multiple cancellable orders: {choices}. Please provide the exact order ID.",
+                "missing_fields": ["order_id"],
+            }
+
     lifecycle = get_order_lifecycle(order_id)
     if not lifecycle:
         return {"status": "not_found", "answer": f"Order {order_id} was not found."}

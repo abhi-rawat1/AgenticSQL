@@ -96,3 +96,26 @@ def test_follow_up_resume_merges_original_entities():
     response = result["response"]
     assert response["intent"] == "initiate_refund"
     assert "10021" in str(response.get("answer", "")) or "10021" in str(response.get("approval_request", {})) or response["status"] in {"no_action_needed", "awaiting_human_approval", "action_completed"}
+
+
+def test_customer_cancellation_requests_open_order_selection():
+    from workflows.support_workflow import process_support_request
+
+    result = process_support_request("Cancel the order for Customer 51", user_id="test-user", session_id="test-session")
+    response = result["response"]
+    assert response["status"] == "awaiting_follow_up"
+    assert response["pending_state"] is not None
+    assert "2096" in response["answer"] or "2167" in response["answer"]
+
+
+def test_resume_customer_cancellation_with_selected_shipped_order():
+    from workflows.support_workflow import process_support_request, resume_support_request
+
+    initial = process_support_request("Cancel the order for Customer 51", user_id="test-user", session_id="test-session")
+    pending = initial["response"]["pending_state"]
+    assert pending is not None
+
+    resumed = resume_support_request("2096", pending, user_id="test-user", session_id="test-session")
+    response = resumed["response"]
+    assert response["status"] == "awaiting_human_approval"
+    assert response["approval_request"] is not None
