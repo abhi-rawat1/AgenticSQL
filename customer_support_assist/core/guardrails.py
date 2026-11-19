@@ -39,6 +39,7 @@ class IntentDecision(BaseModel):
     approval_required: bool = False
     follow_up_question: str | None = None
     summary: str = ""
+    metric_name: str | None = Field(default=None, description="Canonical semantic metric name when a metric is requested")
 
 
 _INTENT_SYSTEM_PROMPT = """

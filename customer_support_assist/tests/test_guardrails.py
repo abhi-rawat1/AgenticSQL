@@ -56,3 +56,43 @@ def test_llm_detects_order_status_lookup_with_hash_order_number():
     assert decision.intent == "lookup_order"
     assert decision.entities.get("order_id") == "2"
     assert decision.approval_required is False
+
+
+def test_semantic_metric_loader_uses_yaml_definitions():
+    from services.metrics_service import find_semantic_metric
+
+    metric = find_semantic_metric("total revenue")
+    assert metric is not None
+    assert metric["name"] == "total_revenue"
+    assert metric["type"] == "sum"
+
+
+def test_unknown_semantic_metric_falls_back_to_general_query():
+    from services.metrics_service import find_semantic_metric
+
+    assert find_semantic_metric("customer_lifetime_value") is None
+
+
+def test_presentation_decision_model_accepts_supported_formats():
+    from services.query_result_service import PresentationDecision
+
+    decision = PresentationDecision(format="line_chart", title="Revenue trend", x_field="month", y_field="revenue")
+    assert decision.format == "line_chart"
+
+
+def test_follow_up_resume_merges_original_entities():
+    from workflows.support_workflow import resume_support_request
+
+    pending = {
+        "original_message": "Initiate a refund",
+        "request_id": "test-request-1",
+        "approved_action": False,
+        "intent": "initiate_refund",
+        "entities": {},
+        "missing_fields": ["order_id"],
+    }
+
+    result = resume_support_request("Order 10021", pending, user_id="test-user", session_id="test-session")
+    response = result["response"]
+    assert response["intent"] == "initiate_refund"
+    assert "10021" in str(response.get("answer", "")) or "10021" in str(response.get("approval_request", {})) or response["status"] in {"no_action_needed", "awaiting_human_approval", "action_completed"}

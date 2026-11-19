@@ -15,7 +15,7 @@ from services.approval_service import (
     reject_request,
 )
 from services.auth_service import authenticate_support_agent
-from workflows.support_workflow import process_support_request
+from workflows.support_workflow import process_support_request, resume_support_request
 
 API_BASE_URL = os.getenv("CUSTOMER_SUPPORT_API_URL", "http://localhost:8000")
 
@@ -121,12 +121,54 @@ def cancel_request_for_ui(request_id: str, approved_by: str, comments: str):
     return cancel_request(request_id, approved_by, comments)
 
 
+def render_query_result(response: dict):
+    rows = response.get("rows", [])
+    presentation = response.get("presentation")
+    sql = response.get("sql")
+
+    if sql:
+        with st.expander("Generated SQL"):
+            st.code(sql, language="sql")
+
+    if not rows:
+        st.info(response.get("answer", "No results found."))
+        return
+
+    df = pd.DataFrame(rows)
+    if not presentation:
+        st.dataframe(df, use_container_width=True)
+        return
+
+    output_format = presentation.get("format", "table")
+    title = presentation.get("title")
+    if title:
+        st.subheader(title)
+
+    x_field = presentation.get("x_field")
+    y_field = presentation.get("y_field")
+
+    if output_format == "table":
+        st.dataframe(df, use_container_width=True)
+    elif output_format == "line_chart" and x_field in df.columns and y_field in df.columns:
+        st.line_chart(df.set_index(x_field)[y_field])
+    elif output_format == "bar_chart" and x_field in df.columns and y_field in df.columns:
+        st.bar_chart(df.set_index(x_field)[y_field])
+    elif output_format == "metric" and len(df.columns) == 1:
+        st.metric(title or "Metric", df.iloc[0, 0])
+    else:
+        st.dataframe(df, use_container_width=True)
+
+
 st.set_page_config(page_title="CustomerSupportAssist", page_icon="🛍️", layout="wide")
 
 if "user" not in st.session_state:
     st.session_state.user = None
 if "access_token" not in st.session_state:
     st.session_state.access_token = None
+if "history" not in st.session_state:
+    st.session_state.history = []
+if "pending_workflow" not in st.session_state:
+    st.session_state.pending_workflow = None
 
 if st.session_state.user is None:
     st.title("CustomerSupportAssist")
@@ -215,6 +257,7 @@ with tabs[0]:
             )
 
         response = result.get("response", {})
+        st.session_state.pending_workflow = response.get("pending_state")
         st.subheader("Result")
         status = response.get("status")
         if status == "awaiting_follow_up":
@@ -226,8 +269,36 @@ with tabs[0]:
             st.warning(response.get("answer"))
             if response.get("approval_request"):
                 st.json(response["approval_request"])
+        elif status in {"ok", "blocked"} and (response.get("rows") or response.get("presentation") or response.get("sql")):
+            render_query_result(response)
+        elif status == "action_completed":
+            st.success(response.get("answer"))
+        elif status == "no_action_needed":
+            st.info(response.get("answer"))
         else:
-            st.write(response)
+            st.info(response.get("answer", "No result available."))
+
+        if st.session_state.pending_workflow:
+            pending = st.session_state.pending_workflow
+            with st.form("workflow_follow_up"):
+                st.caption("Complete the requested information to continue this workflow.")
+                follow_up_answer = st.text_input("Your answer")
+                resume_clicked = st.form_submit_button("Continue workflow")
+                if resume_clicked:
+                    if not follow_up_answer.strip():
+                        st.error("Please provide the missing information.")
+                    else:
+                        resumed = resume_support_request(
+                            follow_up_answer.strip(),
+                            pending,
+                            user_id=user.get("username"),
+                            session_id=st.session_state.get("access_token", "streamlit-session"),
+                        )
+                        resumed_response = resumed.get("response", {})
+                        st.session_state.pending_workflow = resumed_response.get("pending_state")
+                        st.session_state.history.append({"prompt": follow_up_answer, "result": resumed})
+                        st.success(resumed_response.get("answer", "Workflow updated."))
+                        st.rerun()
 
         if result.get("trace"):
             st.subheader("Trace")

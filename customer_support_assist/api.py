@@ -1,5 +1,6 @@
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel
+from typing import Any
 
 from services.approval_service import (
     approve_request,
@@ -11,6 +12,7 @@ from services.approval_service import (
 )
 from services.auth_service import authenticate_support_agent, create_support_user, list_support_users
 from services.jwt_service import decode_access_token
+from workflows.support_workflow import process_support_request, resume_support_request
 
 app = FastAPI(title="CustomerSupportAssist API", version="1.0.0")
 
@@ -39,6 +41,15 @@ class UserCreateRequest(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+
+class SupportRequest(BaseModel):
+    message: str
+
+
+class SupportFollowUpRequest(BaseModel):
+    answer: str
+    pending_state: dict[str, Any]
 
 
 def require_user(authorization: str = Header(default=None, alias="Authorization")):
@@ -124,3 +135,40 @@ def decide_approval(payload: ApprovalDecision, current_user=Depends(require_role
         raise ValueError("Decision must be one of: approved, rejected, cancelled")
     except (ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/support-process")
+def start_support_process(payload: SupportRequest, current_user=Depends(require_role({"support_agent"}))):
+    try:
+        workflow_instance = process_support_request(payload.message, current_user["username"])
+        return {"workflow_instance_id": workflow_instance.id}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/support-resume")
+def resume_support_process(payload: SupportFollowUpRequest, current_user=Depends(require_role({"support_agent"}))):
+    try:
+        result = resume_support_request(payload.answer, payload.pending_state, current_user["username"])
+        return {"result": result}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/support/request")
+def submit_support_request(payload: SupportRequest, current_user=Depends(require_role({"support_agent", "operations_manager", "finance_analyst"}))):
+    return process_support_request(
+        payload.message,
+        user_id=current_user.get("username"),
+        session_id=current_user.get("username"),
+    )
+
+
+@app.post("/support/follow-up")
+def submit_support_follow_up(payload: SupportFollowUpRequest, current_user=Depends(require_role({"support_agent", "operations_manager", "finance_analyst"}))):
+    return resume_support_request(
+        payload.answer,
+        payload.pending_state,
+        user_id=current_user.get("username"),
+        session_id=current_user.get("username"),
+    )
