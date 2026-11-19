@@ -207,10 +207,27 @@ tabs = st.tabs(["Operations", "Approval Center", "Metrics", "Audit Log"])
 with tabs[0]:
     if st.button("Run support workflow"):
         with st.spinner("Analyzing support request..."):
-            result = process_support_request(prompt, approved_action=approved_action)
+            result = process_support_request(
+                prompt,
+                approved_action=approved_action,
+                user_id=user.get("username"),
+                session_id=st.session_state.get("access_token", "streamlit-session"),
+            )
 
+        response = result.get("response", {})
         st.subheader("Result")
-        st.write(result.get("response", {}))
+        status = response.get("status")
+        if status == "awaiting_follow_up":
+            st.warning(response.get("answer"))
+            missing = response.get("missing_fields", [])
+            if missing:
+                st.caption("Missing information: " + ", ".join(missing))
+        elif status == "awaiting_human_approval":
+            st.warning(response.get("answer"))
+            if response.get("approval_request"):
+                st.json(response["approval_request"])
+        else:
+            st.write(response)
 
         if result.get("trace"):
             st.subheader("Trace")

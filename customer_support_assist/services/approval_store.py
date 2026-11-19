@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Column, DateTime, String, Text, create_engine
+from sqlalchemy import Column, DateTime, String, Text, create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from config import settings
@@ -29,12 +29,21 @@ class ApprovalRequestModel(Base):
 
 
 database_url = settings.postgres_url if os.getenv("USE_POSTGRES_FOR_APPROVALS", "false").lower() == "true" else "sqlite:///customer_support_assist.db"
-# engine = create_engine(database_url, future=True)
-engine = create_engine(
-settings.postgres_url,
- connect_args={"options": f"-csearch_path={settings.db_schema}"}, 
- future=True
-)
+
+if database_url.startswith("sqlite"):
+    engine = create_engine(database_url, future=True)
+else:
+    try:
+        engine = create_engine(
+            database_url,
+            connect_args={"options": f"-csearch_path={settings.db_schema}"},
+            future=True,
+        )
+        with engine.begin() as connection:
+            connection.execute(text("SELECT 1"))
+    except Exception:
+        engine = create_engine("sqlite:///customer_support_assist.db", future=True)
+
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base.metadata.create_all(bind=engine)
 

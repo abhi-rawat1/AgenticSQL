@@ -9,11 +9,8 @@ from langchain_openai import ChatOpenAI
 from config import settings
 from core.guardrails import detect_action_intent, require_action_approval
 from tools.customer_support_tools import (
-    check_inventory,
     get_metric,
     get_support_schema,
-    lookup_customer_orders,
-    lookup_order,
     execute_read_query_tool
 )
 
@@ -23,9 +20,6 @@ def build_sql_agent():
 
     tools = [
         execute_read_query_tool,
-        lookup_order,
-        lookup_customer_orders,
-        check_inventory,
         get_support_schema,
         get_metric,
     ]

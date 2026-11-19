@@ -32,3 +32,27 @@ def test_authentication_for_support_agents():
     assert user["username"] == "ops_manager"
     assert user["role"] == "operations_manager"
     assert "token" in user
+
+
+def test_allow_read_only_cte_query():
+    result = validate_sql_query("WITH recent AS (SELECT * FROM orders LIMIT 5) SELECT * FROM recent")
+    assert result.allowed is True
+
+
+def test_block_multiple_statement_with_mutation():
+    result = validate_sql_query("SELECT * FROM orders; DELETE FROM orders")
+    assert result.allowed is False
+
+
+def test_block_drop_statement():
+    result = validate_sql_query("DROP TABLE orders")
+    assert result.allowed is False
+
+
+def test_llm_detects_order_status_lookup_with_hash_order_number():
+    from core.guardrails import detect_support_intent
+
+    decision = detect_support_intent("show order total, payment status, and shipping status for Order #2")
+    assert decision.intent == "lookup_order"
+    assert decision.entities.get("order_id") == "2"
+    assert decision.approval_required is False
