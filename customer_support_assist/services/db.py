@@ -2,13 +2,19 @@ from sqlalchemy import create_engine, text
 
 from config import settings
 
-# engine = create_engine(settings.postgres_url, future=True)
-
 engine = create_engine(
-settings.postgres_url,
- connect_args={"options": f"-csearch_path={settings.db_schema}"}, 
- future=True
+    settings.postgres_url,
+    connect_args={"options": f"-csearch_path={settings.db_schema}"},
+    pool_pre_ping=True,
+    pool_recycle=1800,
+    future=True,
 )
+
+
+def verify_database_connection() -> None:
+    with engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
+
 
 def fetch_table_schema() -> dict[str, dict[str, str]]:
     with engine.connect() as conn:

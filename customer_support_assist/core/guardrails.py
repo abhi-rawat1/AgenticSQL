@@ -171,7 +171,7 @@ def detect_support_intent(message: str) -> IntentDecision:
     llm = ChatOpenAI(
         model=settings.model_name,
         api_key=settings.openai_api_key,
-        timeout=30,
+        timeout=settings.llm_timeout_seconds,
         max_retries=1,
     )
     classifier = llm.with_structured_output(IntentDecision, method="function_calling", strict=False)

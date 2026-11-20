@@ -3,9 +3,6 @@ from typing import Any
 
 import yaml
 
-from services.db import execute_read_query
-
-
 METRIC_MODEL_PATH = Path(__file__).resolve().parents[1] / "dbt" / "semantic_models" / "customer_support_metrics.yml"
 
 

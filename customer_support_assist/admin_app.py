@@ -4,9 +4,8 @@ from urllib import error, request
 
 import streamlit as st
 
-from services.auth_service import authenticate_support_agent, create_support_user, list_support_users
-
 API_BASE_URL = os.getenv("CUSTOMER_SUPPORT_API_URL", "http://localhost:8000")
+API_REQUEST_TIMEOUT_SECONDS = int(os.getenv("API_REQUEST_TIMEOUT_SECONDS", "180"))
 
 
 def api_request(method: str, path: str, payload: dict | None = None, token: str | None = None):
@@ -16,7 +15,7 @@ def api_request(method: str, path: str, payload: dict | None = None, token: str 
     data = json.dumps(payload).encode("utf-8") if payload is not None else None
     req = request.Request(f"{API_BASE_URL}{path}", data=data, headers=headers, method=method)
     try:
-        with request.urlopen(req, timeout=10) as response:
+        with request.urlopen(req, timeout=API_REQUEST_TIMEOUT_SECONDS) as response:
             body = response.read().decode("utf-8")
             return json.loads(body) if body else {}
     except error.HTTPError as exc:
@@ -35,9 +34,6 @@ def login_admin_user(username: str, password: str):
         user = response["user"]
         user["token"] = response["access_token"]
         return user
-    user = authenticate_support_agent(username, password)
-    if user:
-        return user
     raise ValueError("Invalid username or password")
 
 
@@ -51,7 +47,7 @@ def create_user_via_api(username: str, password: str, role: str, name: str):
     )
     if response:
         return response
-    return create_support_user(username, password, role, name)
+    return None
 
 
 def list_users_via_api():
@@ -59,7 +55,7 @@ def list_users_via_api():
     response = api_request("GET", "/users", token=token)
     if response and "users" in response:
         return response["users"]
-    return list_support_users()
+    return None
 
 
 st.set_page_config(page_title="CustomerSupportAssist Admin", layout="wide")

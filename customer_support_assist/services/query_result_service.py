@@ -12,15 +12,17 @@ from services.db import execute_read_query, fetch_table_schema
 
 
 class PresentationDecision(BaseModel):
-    format: Literal["table", "line_chart", "bar_chart", "metric", "text"]
+    format: Literal["table", "line_chart", "bar_chart", "metric", "text", "summary"]
     title: str
     x_field: str | None = None
     y_field: str | None = None
+    summary_text: str = ""
+    bullets: list[str] = Field(default_factory=list)
     reason: str = ""
 
 
 def determine_presentation(rows: list[dict[str, Any]], question: str) -> PresentationDecision:
-    llm = ChatOpenAI(model=settings.model_name, api_key=settings.openai_api_key, timeout=30, max_retries=1)
+    llm = ChatOpenAI(model=settings.model_name, api_key=settings.openai_api_key, timeout=settings.llm_timeout_seconds, max_retries=1)
     prompt = ChatPromptTemplate.from_messages([
         ("system", """
 You decide how to display customer-support query results.
@@ -29,6 +31,8 @@ Use line_chart for time-series/trend data.
 Use bar_chart for category counts or comparisons.
 Use metric for exactly one numeric aggregate with no category/time dimension.
 Use text when data is not suitable for table or chart.
+Use summary for narrative answers, recommendations, status explanations, or results that should be communicated as a paragraph with bullet highlights.
+For summary format, populate summary_text with a concise paragraph and bullets with 2-5 key facts.
 Set x_field and y_field to actual keys present in the sample rows.
 Return only structured output.
 """),
@@ -48,7 +52,7 @@ Return only structured output.
 def generate_and_execute_query(question: str, semantic_metric: dict[str, Any] | None = None) -> dict[str, Any]:
     schema = fetch_table_schema()
     metric_context = semantic_metric or {}
-    llm = ChatOpenAI(model=settings.model_name, api_key=settings.openai_api_key, timeout=30, max_retries=1)
+    llm = ChatOpenAI(model=settings.model_name, api_key=settings.openai_api_key, timeout=settings.llm_timeout_seconds, max_retries=1)
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", """

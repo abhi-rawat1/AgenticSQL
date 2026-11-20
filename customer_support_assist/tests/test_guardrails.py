@@ -119,3 +119,16 @@ def test_resume_customer_cancellation_with_selected_shipped_order():
     response = resumed["response"]
     assert response["status"] == "awaiting_human_approval"
     assert response["approval_request"] is not None
+
+
+def test_presentation_model_accepts_summary_content():
+    from services.query_result_service import PresentationDecision
+
+    decision = PresentationDecision(
+        format="summary",
+        title="Customer order summary",
+        summary_text="The customer has several active and completed orders.",
+        bullets=["2 shipped orders", "1 delivered order", "1 returned order"],
+    )
+    assert decision.format == "summary"
+    assert len(decision.bullets) == 3

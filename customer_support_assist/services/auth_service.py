@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import os
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Boolean, Column, DateTime, String, create_engine
+from sqlalchemy import Boolean, Column, DateTime, String
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-from config import settings
+from services.db import engine
 from services.jwt_service import create_access_token
 
 Base = declarative_base()
@@ -24,24 +23,6 @@ class UserModel(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
-
-def _get_user_database_url() -> str:
-    if os.getenv("USE_POSTGRES_FOR_USERS", "true").lower() == "true" and settings.postgres_url:
-        return settings.postgres_url
-    return "sqlite:///customer_support_users.db"
-
-
-try:
-    #engine = create_engine(_get_user_database_url(), future=True)
-
-    engine = create_engine(settings.postgres_url,
-    connect_args={"options": f"-csearch_path={settings.db_schema}"}, 
-    future=True)
-    
-    with engine.begin() as conn:
-        conn.execute("SELECT 1")
-except Exception:
-    engine = create_engine("sqlite:///customer_support_users.db", future=True)
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base.metadata.create_all(bind=engine)
